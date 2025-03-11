@@ -1,0 +1,407 @@
+const pool = require("../config/db");
+const {
+  S3Client,
+  DeleteObjectCommand,
+  PutObjectCommand,
+} = require("@aws-sdk/client-s3");
+const ACCOUNT_ID = "a21b9f93a0f0bb65326925e6187bc383";
+const ACCESS_KEY_ID = "6fc8f764f7965ea3b6bb64a4e03db63e";
+const SECRET_ACCESS_KEY =
+  "65d5063d829cdf51ef7ff1158da0aa427e5169aea9bf9c2eaf63f1a2d0a9d140";
+const imageUrlPublic = `https://pub-7f23c6666b0142f79a3eef22e1d1e014.r2.dev`;
+
+const S3 = new S3Client({
+  region: "auto",
+  endpoint: `https://${ACCOUNT_ID}.r2.cloudflarestorage.com`,
+  credentials: {
+    accessKeyId: ACCESS_KEY_ID,
+    secretAccessKey: SECRET_ACCESS_KEY,
+  },
+});
+
+const createTemplate = async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const { geo, languages, type, size, tags } = req.body;
+    const tagsParse = JSON.parse(tags);
+
+    if (!req.file) {
+      throw new Error("Файл не передан в запросе");
+    }
+
+    if (!req.file.buffer) {
+      throw new Error(
+        "Buffer is undefined. Multer may not be configured correctly."
+      );
+    }
+
+    await client.query("BEGIN");
+
+    const fileKey = `${Date.now()}-${req.file.originalname}`;
+    const uploadParams = {
+      Bucket: "betting",
+      Key: fileKey,
+      Body: req.file.buffer,
+      ContentType: req.file.mimetype,
+      ContentLength: req.file.buffer.length,
+      ACL: "public-read",
+    };
+
+    await S3.send(new PutObjectCommand(uploadParams));
+    const imageUrl = `${imageUrlPublic}/${fileKey}`;
+
+    const bannerResult = await client.query(
+      "INSERT INTO banners (geo, language, type, size, url, name) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id",
+      [geo, languages, type, size, imageUrl, fileKey]
+    );
+    const bannerId = bannerResult.rows[0].id;
+
+    if (tagsParse && tagsParse.length > 0) {
+      const tagInserts = tagsParse.map((tagId) =>
+        client.query(
+          "INSERT INTO banner_tag (banner_id, tag_id) VALUES ($1, $2) ON CONFLICT DO NOTHING",
+          [bannerId, tagId]
+        )
+      );
+      await Promise.all(tagInserts);
+    }
+
+    await client.query("COMMIT");
+    res.json({ message: "Баннер создан!", bannerId, imageUrl });
+  } catch (err) {
+    await client.query("ROLLBACK");
+    console.error("Ошибка сервера:", err.message);
+    res.status(500).send("Ошибка сервера: " + err.message);
+  } finally {
+    client.release();
+  }
+};
+
+const getTemplateById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const bannerResult = await pool.query(
+      "SELECT * FROM banners WHERE id = $1",
+      [id]
+    );
+    if (bannerResult.rows.length === 0) {
+      return res.status(404).json({ message: "Баннер не найден" });
+    }
+    const banner = bannerResult.rows[0];
+
+    // Получаем теги
+    const tagsResult = await pool.query(
+      "SELECT t.id, t.name FROM tags t JOIN banner_tag bt ON t.id = bt.tag_id WHERE bt.banner_id = $1",
+      [id]
+    );
+
+    res.json({
+      id: banner.id,
+      url: banner.url,
+      geo: banner.geo,
+      language: banner.language,
+      size: banner.size,
+      type: banner.type,
+      tags: tagsResult.rows,
+    });
+  } catch (err) {
+    console.error("Ошибка при получении баннера:", err.message);
+    res.status(500).send("Ошибка сервера");
+  }
+};
+
+const getTemplates = async (req, res) => {
+  try {
+    const { tags, type, size, language, page = 1, limit = 10 } = req.query;
+    let query = `
+      SELECT 
+        banners.*, 
+        COALESCE(json_agg(DISTINCT jsonb_build_object('id', tags.id, 'name', tags.name)) FILTER (WHERE tags.id IS NOT NULL), '[]') AS tags
+      FROM banners
+      LEFT JOIN banner_tag ON banners.id = banner_tag.banner_id
+      LEFT JOIN tags ON banner_tag.tag_id = tags.id
+      WHERE 1=1
+    `;
+    let params = [];
+
+    if (type) {
+      query += " AND banners.type = $" + (params.length + 1);
+      params.push(type);
+    }
+    if (size) {
+      query += " AND banners.size = $" + (params.length + 1);
+      params.push(size);
+    }
+    if (language) {
+      query += " AND banners.language ILIKE $" + (params.length + 1);
+      params.push(language);
+    }
+    if (tags) {
+      const tagArray = tags.split(",").map((tag) => parseInt(tag, 10));
+      if (tagArray.length > 0) {
+        const placeholders = tagArray.map(
+          (_, index) => `$${params.length + index + 1}`
+        );
+        query += ` AND banner_tag.tag_id IN (${placeholders.join(", ")})`;
+        params.push(...tagArray);
+        query += ` GROUP BY banners.id HAVING COUNT(DISTINCT banner_tag.tag_id) = ${tagArray.length}`;
+      }
+    } else {
+      query += " GROUP BY banners.id";
+    }
+
+    query += " ORDER BY banners.id DESC";
+    query += ` LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
+    params.push(limit, (page - 1) * limit);
+
+    const result = await pool.query(query, params);
+
+    const totalCountResult = await pool.query(`
+      SELECT COUNT(DISTINCT banners.id) AS count
+      FROM banners
+      LEFT JOIN banner_tag ON banners.id = banner_tag.banner_id
+      LEFT JOIN tags ON banner_tag.tag_id = tags.id
+      WHERE 1=1
+    `);
+
+    const totalCount = totalCountResult.rows[0].count;
+    const totalPages = Math.ceil(totalCount / limit);
+
+    res.json({
+      data: result.rows,
+      totalPages,
+    });
+  } catch (err) {
+    console.error("Ошибка сервера:", err.message);
+    res.status(500).send("Ошибка сервера");
+  }
+};
+
+// Удаление баннеров по массиву ID
+// const deleteTemplates = async (req, res) => {
+//   try {
+//     const { ids } = req.body;
+
+//     if (!ids || !Array.isArray(ids) || ids.length === 0) {
+//       return res.status(400).json({ error: "Array of IDs is required" });
+//     }
+
+//     const query = `
+//       DELETE FROM banners
+//       WHERE id IN (${ids.map((_, index) => `$${index + 1}`).join(", ")})
+//       RETURNING *
+//     `;
+//     const params = ids;
+
+//     const result = await pool.query(query, params);
+
+//     if (result.rowCount === 0) {
+//       return res.status(404).json({ error: "No templates found" });
+//     }
+
+//     res.json({
+//       message: `Successfully deleted ${result.rowCount} template(s)`,
+//       deletedTemplates: result.rows,
+//     });
+//   } catch (err) {
+//     console.error("Ошибка при удалении:", err.message);
+//     res.status(500).json({ error: "Server error" });
+//   }
+// };
+
+const deleteTemplate = async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const { bannerId } = req.params; // Предполагаем, что ID баннера приходит в параметрах URL
+
+    await client.query("BEGIN");
+
+    // Получаем информацию о баннере для получения fileKey
+    const bannerResult = await client.query(
+      "SELECT name FROM banners WHERE id = $1",
+      [bannerId]
+    );
+
+    if (bannerResult.rows.length === 0) {
+      throw new Error("Баннер не найден");
+    }
+
+    const fileKey = bannerResult.rows[0].name;
+
+    // Удаляем связи с тегами
+    await client.query("DELETE FROM banner_tag WHERE banner_id = $1", [
+      bannerId,
+    ]);
+
+    // Удаляем сам баннер из таблицы banners
+    await client.query("DELETE FROM banners WHERE id = $1", [bannerId]);
+
+    // Параметры для удаления из S3
+    const deleteParams = {
+      Bucket: "betting",
+      Key: fileKey,
+    };
+
+    // Удаляем файл из S3
+    await S3.send(new DeleteObjectCommand(deleteParams));
+
+    await client.query("COMMIT");
+    res.json({ message: "Баннер удален!" });
+  } catch (err) {
+    await client.query("ROLLBACK");
+    console.error("Ошибка сервера:", err.message);
+    res.status(500).send("Ошибка сервера: " + err.message);
+  } finally {
+    client.release();
+  }
+};
+
+// Обновление баннера по ID
+const updateTemplate = async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const { id } = req.params;
+    const { geo, languages, type, size, tags } = req.body;
+    const tagsParse = tags ? JSON.parse(tags) : undefined;
+
+    const existingBanner = await client.query(
+      "SELECT id, name FROM banners WHERE id = $1",
+      [id]
+    );
+
+    if (existingBanner.rows.length === 0) {
+      return res.status(404).json({ message: "Баннер не найден" });
+    }
+
+    const bannerId = existingBanner.rows[0].id;
+
+    await client.query("BEGIN");
+
+    let updateQuery = "UPDATE banners SET ";
+    const params = [];
+    let paramIndex = 1;
+
+    if (geo !== undefined) {
+      updateQuery += `geo = $${paramIndex}, `;
+      params.push(geo);
+      paramIndex++;
+    }
+    if (languages !== undefined) {
+      updateQuery += `language = $${paramIndex}, `;
+      params.push(languages);
+      paramIndex++;
+    }
+    if (type !== undefined) {
+      updateQuery += `type = $${paramIndex}, `;
+      params.push(type);
+      paramIndex++;
+    }
+    if (size !== undefined) {
+      updateQuery += `size = $${paramIndex}, `;
+      params.push(size);
+      paramIndex++;
+    }
+
+    if (paramIndex > 1) {
+      updateQuery = updateQuery.slice(0, -2); // Удаляем лишнюю запятую и пробел
+      updateQuery += ` WHERE id = $${paramIndex}`;
+      params.push(bannerId);
+      await client.query(updateQuery, params);
+    }
+
+    if (tagsParse !== undefined) {
+      await client.query("DELETE FROM banner_tag WHERE banner_id = $1", [
+        bannerId,
+      ]);
+      if (tagsParse.length > 0) {
+        const tagInserts = tagsParse.map((tagId) =>
+          client.query(
+            "INSERT INTO banner_tag (banner_id, tag_id) VALUES ($1, $2) ON CONFLICT DO NOTHING",
+            [bannerId, tagId]
+          )
+        );
+        await Promise.all(tagInserts);
+      }
+    }
+
+    await client.query("COMMIT");
+    res.json({ message: "Баннер обновлён!", bannerId });
+  } catch (err) {
+    await client.query("ROLLBACK");
+    console.error("Server error:", err.message);
+    res.status(500).send("Ошибка сервера");
+  } finally {
+    client.release();
+  }
+};
+
+const getTypes = async (req, res) => {
+  try {
+    const result = await pool.query("SELECT DISTINCT type FROM banners");
+    res.json(result.rows);
+  } catch (err) {
+    console.error("Ошибка при получении типов:", err.message);
+    res.status(500).send("Ошибка сервера");
+  }
+};
+
+// Получение уникальных размеров баннеров
+const getSizes = async (req, res) => {
+  try {
+    const result = await pool.query("SELECT DISTINCT size FROM banners");
+    res.json(result.rows);
+  } catch (err) {
+    console.error("Ошибка при получении размеров:", err.message);
+    res.status(500).send("Ошибка сервера");
+  }
+};
+
+const incrementDownloadCount = async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const { id } = req.params;
+
+    await client.query("BEGIN");
+
+    const updateResult = await client.query(
+      `
+      UPDATE banners 
+      SET download_count = COALESCE(download_count, 0) + 1 
+      WHERE id = $1 
+      RETURNING id, download_count
+      `,
+      [id]
+    );
+
+    if (updateResult.rows.length === 0) {
+      throw new Error("Баннер не найден");
+    }
+
+    const updatedBanner = updateResult.rows[0];
+
+    await client.query("COMMIT");
+
+    res.json({
+      message: "Счетчик скачиваний увеличен",
+      bannerId: updatedBanner.id,
+      downloadCount: updatedBanner.download_count,
+    });
+  } catch (err) {
+    await client.query("ROLLBACK");
+    console.error("Ошибка при увеличении счетчика:", err.message);
+    res.status(404).send("Ошибка: " + err.message);
+  } finally {
+    client.release();
+  }
+};
+
+module.exports = {
+  getTemplates,
+  deleteTemplate,
+  createTemplate,
+  updateTemplate,
+  getTemplateById,
+  getTypes,
+  getSizes,
+  incrementDownloadCount,
+};
