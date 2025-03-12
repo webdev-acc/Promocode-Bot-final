@@ -35,3 +35,4 @@ export const TEMPLATES_GEO = [
   "NL", // Нидерланды
   "SE", // Швеция
 ];
+export const USER_ROLES = ["Admin", "Moderator", "User"];

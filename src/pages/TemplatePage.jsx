@@ -29,7 +29,7 @@ const TemplatePage = () => {
   const [svgContent, setSvgContent] = useState("");
   const [promocode, setPromocode] = useState("");
   const [error, setError] = useState("");
-  const currentUser = useAuth();
+  const { isUser } = useAuth();
   const svgContainerRef = useRef(null);
   const { tgWebAppData } = retrieveLaunchParams();
   const CHAT_ID = tgWebAppData.user.id;
@@ -272,7 +272,7 @@ const TemplatePage = () => {
           }}
         >
           <InputSelect
-            readOnly={!currentUser.adminAccess}
+            readOnly={isUser}
             label="Geo"
             name="geo"
             options={TEMPLATES_GEO}
@@ -280,7 +280,7 @@ const TemplatePage = () => {
             onChange={handleChangeValues}
           />
           <InputSelect
-            readOnly={!currentUser.adminAccess}
+            readOnly={isUser}
             label="Language"
             name="language"
             options={languagesToArray()}
@@ -288,7 +288,7 @@ const TemplatePage = () => {
             onChange={handleChangeValues}
           />
           <InputSelect
-            readOnly={!currentUser.adminAccess}
+            readOnly={isUser}
             label="Size"
             name="size"
             options={TEMPLATE_SIZES}
@@ -296,7 +296,7 @@ const TemplatePage = () => {
             onChange={handleChangeValues}
           />
           <InputSelect
-            readOnly={!currentUser.adminAccess}
+            readOnly={isUser}
             label="Tags"
             name="tags"
             options={tagOptions}
@@ -305,9 +305,7 @@ const TemplatePage = () => {
             onChange={handleChangeValues}
             existingTags={editValues.tags}
           />
-          {currentUser.adminAccess && (
-            <Button onClick={handleSaveChanges}>Save changes</Button>
-          )}
+          {!isUser && <Button onClick={handleSaveChanges}>Save changes</Button>}
         </AccordionDetails>
       </Accordion>
 

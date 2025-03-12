@@ -6,25 +6,42 @@ import {
   ListItem,
   ListItemText,
   IconButton,
-  Checkbox,
   InputLabel,
+  FormControl,
+  Select,
+  MenuItem,
+  styled,
+  Paper,
+  Stack,
   Typography,
 } from "@mui/material";
 import DeleteIcon from "@mui/icons-material/Delete";
 import { useEffect, useState } from "react";
 import axios from "axios";
-import { URL_BACK } from "../constants";
+import { URL_BACK, USER_ROLES } from "../constants";
 import AcceptActionDialog from "../components/AcceptActionDialog";
+
+const Item = styled(Paper)(({ theme }) => ({
+  cursor: "pointer",
+  backgroundColor: "#fff",
+  ...theme.typography.body2,
+  padding: theme.spacing(1),
+  textAlign: "center",
+  color: theme.palette.text.secondary,
+  ...theme.applyStyles("dark", {
+    backgroundColor: "#1A2027",
+  }),
+}));
 
 const AdminUsersPage = () => {
   const [newUser, setNewUser] = useState({
     userName: "",
     email: "",
+    role: "",
   });
   const [errorMessage, setErrorMessage] = useState("");
   const [userList, setUsersList] = useState([]);
   const [update, setUpdate] = useState(false);
-  const [isSuperUser, setIsSuperUser] = useState(false);
   const [open, setOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
 
@@ -37,13 +54,9 @@ const AdminUsersPage = () => {
       .post(`${URL_BACK}/newUser`, {
         userName: newUser.userName,
         email: newUser.email,
-        superuser: isSuperUser,
+        role: newUser.role,
       })
       .then(() => setUpdate((prev) => !prev));
-  };
-
-  const handleCheckbox = (event) => {
-    setIsSuperUser(event.target.checked);
   };
 
   const handleOpen = (userName) => {
@@ -110,20 +123,21 @@ const AdminUsersPage = () => {
           value={newUser.email}
           onChange={handleNewUserChange}
         />
-        <InputLabel
-          sx={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
-        >
-          <Typography>Advanced rights</Typography>
-          <Checkbox
-            checked={isSuperUser}
-            onChange={handleCheckbox}
-            inputProps={{ "aria-label": "controlled" }}
-          />
-        </InputLabel>
+        <FormControl fullWidth>
+          <InputLabel id="demo-simple-select-label">Role</InputLabel>
+          <Select
+            name="role"
+            value={newUser.role || ""}
+            label="Role"
+            onChange={handleNewUserChange}
+          >
+            {USER_ROLES.map((el) => (
+              <MenuItem key={el} value={el.toLowerCase()}>
+                {el}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
         <Button
           sx={{ height: "60px" }}
           onClick={handleAddNewUser}
@@ -133,38 +147,45 @@ const AdminUsersPage = () => {
           Add
         </Button>
       </Box>
-      <Box>
-        <List dense sx={{ width: "100%", bgcolor: "background.paper" }}>
-          {userList?.map((value) => {
-            const labelId = `checkbox-list-secondary-label-${value.name}`;
-            return (
-              <ListItem
-                key={value.name}
-                secondaryAction={
-                  <IconButton
-                    onClick={() => handleOpen(value.name)}
-                    color="error"
-                  >
-                    <DeleteIcon />
-                  </IconButton>
-                }
-                disablePadding
-              >
-                <ListItemText
-                  id={labelId}
-                  secondary={value.name}
-                  primary="User name"
-                />
-                <ListItemText
-                  id={labelId}
-                  primary="Email"
-                  secondary={value.email}
-                />
-              </ListItem>
-            );
-          })}
-        </List>
-      </Box>
+      {userList?.map((el) => (
+        <Item
+          key={el.name}
+          sx={{
+            display: "flex",
+            flexDirection: "column",
+            gap: 1,
+            alignItems: "start",
+            justifyContent: "space-between",
+            position: "relative",
+          }}
+        >
+          <Stack sx={{ borderBottom: "1px solid grey", width: "80%" }}>
+            <Box display="flex" gap={2} alignItems="center">
+              <Typography variant="body1">UserName:</Typography>
+              <Typography variant="body2">{el.name}</Typography>
+            </Box>
+          </Stack>
+          <Stack sx={{ borderBottom: "1px solid grey", width: "80%" }}>
+            <Box display="flex" gap={2} alignItems="center">
+              <Typography variant="body1">Email:</Typography>
+              <Typography variant="body2">{el.email}</Typography>
+            </Box>
+          </Stack>
+          <Stack sx={{ borderBottom: "1px solid grey", width: "80%" }}>
+            <Box display="flex" gap={2} alignItems="center">
+              <Typography variant="body1">Role:</Typography>
+              <Typography variant="body2">{el.role}</Typography>
+            </Box>
+          </Stack>
+          <IconButton
+            onClick={() => handleOpen(el.name)}
+            color="error"
+            sx={{ position: "absolute", right: 2, top: "30%" }}
+          >
+            <DeleteIcon />
+          </IconButton>
+        </Item>
+      ))}
     </Box>
   );
 };

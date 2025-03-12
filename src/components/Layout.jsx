@@ -12,7 +12,7 @@ export default function Layout() {
   const [anchorEl, setAnchorEl] = useState(null);
   const navigate = useNavigate();
   const open = Boolean(anchorEl);
-  const currentUser = useAuth();
+  const { isAdmin, isUser } = useAuth();
   const { mode, setMode } = useColorScheme();
   const handleClick = (event) => {
     setAnchorEl(event.currentTarget);
@@ -21,6 +21,7 @@ export default function Layout() {
     navigate(endpoint);
     setAnchorEl(null);
   };
+
   return (
     <>
       <Box display="flex" justifyContent="space-between" mt={2}>
@@ -44,12 +45,12 @@ export default function Layout() {
           }}
         >
           <MenuItem onClick={() => handleClose("/")}>Главная страница</MenuItem>
-          {currentUser.superuser && (
+          {isAdmin && (
             <MenuItem onClick={() => handleClose("/add_admin")}>
               Добавить администратора
             </MenuItem>
           )}
-          {currentUser.adminAccess && (
+          {!isUser && (
             <MenuItem onClick={() => handleClose("/add_template")}>
               Добавить новый креатив
             </MenuItem>

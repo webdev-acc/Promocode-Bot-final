@@ -9,50 +9,84 @@ export const useAuth = () => {
   const dispatch = useDispatch();
   const { currentUser } = useSelector(selectUsers);
   const { tgWebAppData } = retrieveLaunchParams();
+
   useEffect(() => {
-    if (!currentUser.userName) return;
+    const telegramUserId = tgWebAppData?.user?.id;
+    const telegramUserName = tgWebAppData?.user?.username;
+
+    if (
+      telegramUserId &&
+      telegramUserName &&
+      (currentUser.userId !== telegramUserId ||
+        currentUser.userName !== telegramUserName)
+    ) {
+      dispatch(
+        setCurrentUser({
+          userId: telegramUserId,
+          userName: telegramUserName,
+          role: currentUser.role || "user", 
+        })
+      );
+    }
+  }, [
+    dispatch,
+    tgWebAppData?.user?.id,
+    tgWebAppData?.user?.username,
+    currentUser,
+  ]);
+
+  useEffect(() => {
+    const telegramUserId = tgWebAppData?.user?.id;
+    const userName = currentUser.userName;
+
+    if (!userName || !telegramUserId) return;
+
     axios
-      .get(
-        `${URL_BACK}/user_access/${currentUser.userName}/${tgWebAppData.user.id}`
-      )
+      .get(`${URL_BACK}/user_access/${userName}/${telegramUserId}`)
       .then(({ data }) => {
         dispatch(
           setCurrentUser({
-            adminAccess: data.exists,
-            superuser: data.superuser,
+            ...currentUser,
+            adminAccess:
+              data.exists && ["admin", "moderator"].includes(data.role),
+            role: data.role || "user", 
+          })
+        );
+      })
+      .catch((error) => {
+        console.error("Ошибка проверки доступа:", error);
+        dispatch(
+          setCurrentUser({
+            ...currentUser,
+            adminAccess: false,
+            role: "user",
           })
         );
       });
-  }, [currentUser.userName, tgWebAppData.user.id]);
+  }, [dispatch, currentUser.userName, tgWebAppData?.user?.id]);
 
   useEffect(() => {
-    if (
-      currentUser.userId === tgWebAppData.user.id &&
-      currentUser.userName === tgWebAppData.user.username
-    ) {
-      return;
-    }
-    axios.patch(`${URL_BACK}/updateUser/`, {
-      userName: currentUser.userName,
-      tg_id: tgWebAppData.user.id,
-    });
-  }, [currentUser.userName, tgWebAppData.user.id]);
+    const telegramUserId = tgWebAppData?.user?.id;
+    const userName = currentUser.userName;
 
-  useEffect(() => {
-    if (
-      currentUser.userId === tgWebAppData.user.id &&
-      currentUser.userName === tgWebAppData.user.username
-    ) {
+    if (!userName || !telegramUserId || currentUser.userId === telegramUserId) {
       return;
     }
 
-    dispatch(
-      setCurrentUser({
-        userId: tgWebAppData.user.id,
-        userName: tgWebAppData.user.username,
+    axios
+      .patch(`${URL_BACK}/updateUser/`, {
+        userName,
+        tg_id: telegramUserId,
       })
-    );
-  }, [tgWebAppData.user.id, tgWebAppData.user.username]);
+      .catch((error) =>
+        console.error("Ошибка обновления пользователя:", error)
+      );
+  }, [currentUser.userName, currentUser.userId, tgWebAppData?.user?.id]);
 
-  return currentUser;
+  return {
+    ...currentUser,
+    isAdmin: currentUser.role === "admin",
+    isModerator: currentUser.role === "moderator",
+    isUser: currentUser.role === "user",
+  };
 };

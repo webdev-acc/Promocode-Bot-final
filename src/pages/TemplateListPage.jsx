@@ -15,9 +15,9 @@ import {
 } from "../store/slices/creoFiltersSlice/creoFiltersSlice";
 import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
-import { TEMPLATE_TYPES, URL_BACK, TEMPLATE_SIZES } from "../constants";
-import { languagesToArray } from "../helpers/languagesToArray";
+import { URL_BACK } from "../constants";
 import AcceptActionDialog from "../components/AcceptActionDialog";
+import { useAuth } from "../hooks/useAdmin";
 
 const TemplateListPage = () => {
   const [templatesList, setTemplatesList] = useState([]);
@@ -32,6 +32,7 @@ const TemplateListPage = () => {
   const [openDialog, setOpenDialog] = useState(false);
   const [updateList, setUpdateList] = useState(false);
   const [targetName, setTargetName] = useState("");
+  const { isUser } = useAuth();
 
   const handleChangeFilters = (event) => {
     const { name, value } = event.target;
@@ -201,6 +202,7 @@ const TemplateListPage = () => {
                 removeBtnClick={(event) =>
                   onRemoveBtnClick(event, template.id, template.name)
                 }
+                showRemoveBtn={!isUser}
               />
             </Box>
           ))}

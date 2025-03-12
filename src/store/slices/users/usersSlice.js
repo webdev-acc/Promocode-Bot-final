@@ -6,6 +6,7 @@ const initialState = {
     userId: null,
     adminAccess: false,
     superuser: false,
+    role: ""
   },
 };
 

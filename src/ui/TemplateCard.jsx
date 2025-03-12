@@ -2,7 +2,6 @@ import * as React from "react";
 import Typography from "@mui/material/Typography";
 import { Box, IconButton, Paper, Stack, styled } from "@mui/material";
 import { useNavigate } from "react-router";
-import { useAuth } from "../hooks/useAdmin";
 import DownloadIcon from "@mui/icons-material/Download";
 import DeleteIcon from "@mui/icons-material/Delete";
 
@@ -18,10 +17,13 @@ const Item = styled(Paper)(({ theme }) => ({
   }),
 }));
 
-export default function TemplateCard({ template, removeBtnClick }) {
+export default function TemplateCard({
+  template,
+  removeBtnClick,
+  showRemoveBtn,
+}) {
   const { url, language, size, type, tags, geo, id, download_count } = template;
   const navigate = useNavigate();
-  const currentUser = useAuth();
 
   const handleClick = () => {
     navigate(`/template/${id}`, { state: template });
@@ -98,7 +100,7 @@ export default function TemplateCard({ template, removeBtnClick }) {
           </Typography>
           <DownloadIcon fontSize="small" color="info" />
         </Box>
-        {currentUser.adminAccess && (
+        {showRemoveBtn && (
           <IconButton
             onClick={removeBtnClick}
             sx={{ position: "absolute", top: 1, right: 1 }}

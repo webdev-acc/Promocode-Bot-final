@@ -3,7 +3,8 @@ const pool = require("../config/db");
 // Создание нового пользователя
 const createUser = async (req, res) => {
   try {
-    const { userName: name, email, superuser } = req.body;
+    const { userName: name, email, role } = req.body;
+    const validRoles = ["admin", "user", "moderator"]; // список допустимых ролей
 
     if (!name) {
       return res.status(400).json({ message: "Напишите никнейм пользователя" });
@@ -13,8 +14,18 @@ const createUser = async (req, res) => {
       return res.status(400).json({ message: "Напишите email пользователя" });
     }
 
+    if (!role) {
+      return res.status(400).json({ message: "Выберите роль пользователя" });
+    }
+
+    if (!validRoles.includes(role)) {
+      return res
+        .status(400)
+        .json({ message: "Недопустимая роль пользователя" });
+    }
+
     const existingUser = await pool.query(
-      "SELECT * FROM users_admin WHERE name = $1 AND email = $2",
+      "SELECT * FROM users WHERE name = $1 AND email = $2",
       [name, email]
     );
 
@@ -25,8 +36,8 @@ const createUser = async (req, res) => {
     }
 
     const result = await pool.query(
-      "INSERT INTO users_admin (name, email, is_superuser) VALUES ($1, $2, $3) RETURNING *",
-      [name, email, superuser]
+      "INSERT INTO users (name, email, role) VALUES ($1, $2, $3) RETURNING *",
+      [name, email, role]
     );
 
     res.json(result.rows[0]);
@@ -50,7 +61,7 @@ const updateUser = async (req, res) => {
     }
 
     const existingUser = await pool.query(
-      "SELECT * FROM users_admin WHERE name = $1",
+      "SELECT * FROM users WHERE name = $1",
       [name]
     );
 
@@ -59,7 +70,7 @@ const updateUser = async (req, res) => {
     }
 
     const result = await pool.query(
-      "UPDATE users_admin SET tg_id = $1 WHERE name = $2 RETURNING *",
+      "UPDATE users SET tg_id = $1 WHERE name = $2 RETURNING *",
       [tg_id, name]
     );
 
@@ -80,7 +91,7 @@ const deleteUser = async (req, res) => {
     const { name } = req.params;
 
     const existingUser = await pool.query(
-      "SELECT * FROM users_admin WHERE name = $1",
+      "SELECT * FROM users WHERE name = $1",
       [name]
     );
 
@@ -88,7 +99,7 @@ const deleteUser = async (req, res) => {
       return res.status(404).json({ message: "Пользователь не найден" });
     }
 
-    await pool.query("DELETE FROM users_admin WHERE name = $1", [name]);
+    await pool.query("DELETE FROM users WHERE name = $1", [name]);
 
     res.json({ message: "Пользователь успешно удален" });
   } catch (err) {
@@ -100,7 +111,7 @@ const deleteUser = async (req, res) => {
 // Получение списка всех пользователей
 const getUsers = async (req, res) => {
   try {
-    const result = await pool.query("SELECT * FROM users_admin");
+    const result = await pool.query("SELECT * FROM users");
 
     res.json(result.rows);
   } catch (err) {
@@ -119,21 +130,26 @@ const checkUserAccess = async (req, res) => {
     }
 
     const result = await pool.query(
-      "SELECT tg_id, name, is_superuser FROM users_admin WHERE name = $1 OR tg_id = $2 LIMIT 1",
+      "SELECT tg_id, name, role FROM users WHERE name = $1 OR tg_id = $2 LIMIT 1",
       [name, id]
     );
 
     if (result.rows.length > 0) {
-      res.json({ exists: true, superuser: result.rows[0].is_superuser });
+      res.json({
+        exists: true,
+        role: result.rows[0].role,
+      });
     } else {
-      res.json({ exists: false, user: null });
+      res.json({
+        exists: false,
+        user: null,
+      });
     }
   } catch (err) {
     console.error("Ошибка при проверке пользователя:", err.message);
     res.status(500).send("Ошибка сервера");
   }
 };
-
 module.exports = {
   createUser,
   updateUser,
