@@ -6,7 +6,7 @@ const {
   GetObjectCommand,
 } = require("@aws-sdk/client-s3");
 require("dotenv").config();
-const imageUrlPublic = `https://mediafiles.promocode888starzbot.site`;
+const BUCKET_NAME = process.env.BUCKET_NAME;
 
 const S3 = new S3Client({
   region: "auto",
@@ -37,7 +37,7 @@ const createTemplate = async (req, res) => {
 
     const fileKey = `${Date.now()}-${req.file.originalname}`;
     const uploadParams = {
-      Bucket: "betting",
+      Bucket: BUCKET_NAME,
       Key: fileKey,
       Body: req.file.buffer,
       ContentType: req.file.mimetype,
@@ -46,7 +46,7 @@ const createTemplate = async (req, res) => {
     };
 
     await S3.send(new PutObjectCommand(uploadParams));
-    const imageUrl = `${imageUrlPublic}/${fileKey}`;
+    const imageUrl = `${process.env.PUBLIC_URL}/${fileKey}`;
 
     const bannerResult = await client.query(
       "INSERT INTO banners (geo, language, type, size, url, name) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id",
@@ -78,28 +78,35 @@ const createTemplate = async (req, res) => {
 const getTemplateById = async (req, res) => {
   try {
     const { id } = req.params;
+    console.log(`Запрос на баннер с ID: ${id}`);
+
     const bannerResult = await pool.query(
       "SELECT * FROM banners WHERE id = $1",
       [id]
     );
     if (bannerResult.rows.length === 0) {
+      console.log(`Баннер с ID ${id} не найден`);
       return res.status(404).json({ message: "Баннер не найден" });
     }
     const banner = bannerResult.rows[0];
+    console.log(`Баннер найден: ${JSON.stringify(banner)}`);
 
     const tagsResult = await pool.query(
       "SELECT t.id, t.name FROM tags t JOIN banner_tag bt ON t.id = bt.tag_id WHERE bt.banner_id = $1",
       [id]
     );
+    console.log(`Теги для баннера ${id}: ${JSON.stringify(tagsResult.rows)}`);
 
     const s3Response = await S3.send(
       new GetObjectCommand({
-        Bucket: "betting",
+        Bucket: BUCKET_NAME,
         Key: banner.name, // Имя файла в S3
       })
     );
+    console.log(`Файл найден в S3 с ключом: ${banner.name}`);
 
     const fileData = await s3Response.Body.transformToString();
+    console.log(`Данные файла получены`);
 
     res.json({
       id: banner.id,
@@ -116,6 +123,7 @@ const getTemplateById = async (req, res) => {
     res.status(500).send("Ошибка сервера");
   }
 };
+
 const getTemplates = async (req, res) => {
   try {
     const { tags, type, size, language, page = 1, limit = 10 } = req.query;
@@ -208,7 +216,7 @@ const deleteTemplate = async (req, res) => {
     await client.query("DELETE FROM banners WHERE id = $1", [bannerId]);
 
     const deleteParams = {
-      Bucket: "betting",
+      Bucket: BUCKET_NAME,
       Key: fileKey,
     };
 
