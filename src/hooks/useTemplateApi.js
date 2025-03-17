@@ -1,7 +1,5 @@
 import { useState } from "react";
 import axios from "axios";
-import { DeleteObjectsCommand } from "@aws-sdk/client-s3";
-import { S3 } from "../helpers/S3";
 import { URL_BACK } from "../constants";
 
 export const useTemplateApi = () => {
@@ -33,29 +31,10 @@ export const useTemplateApi = () => {
     }
   };
 
-  const deleteImagesCloud = async (files, bucket) => {
-    try {
-      const { Deleted } = await S3.send(
-        new DeleteObjectsCommand({
-          Bucket: bucket,
-          Delete: {
-            Objects: files.map((k) => ({ Key: k })),
-          },
-        })
-      );
-
-      return Deleted;
-    } catch (error) {
-      console.error("Error in deleteImagesCloud:", error);
-      throw error;
-    }
-  };
-
   return {
     fetchTags,
     addTag,
     uploadTemplate,
-    deleteImagesCloud,
     loading,
     error,
   };

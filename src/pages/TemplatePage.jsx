@@ -19,8 +19,6 @@ import InputSelect from "../ui/InputSelect";
 import { useTemplateApi } from "../hooks/useTemplateApi";
 import { TEMPLATE_SIZES, TEMPLATES_GEO, URL_BACK } from "../constants";
 import { languagesToArray } from "../helpers/languagesToArray";
-import { GetObjectCommand } from "@aws-sdk/client-s3";
-import { S3 } from "../helpers/S3";
 import { useAuth } from "../hooks/useAdmin";
 
 const TemplatePage = () => {
@@ -33,7 +31,7 @@ const TemplatePage = () => {
   const svgContainerRef = useRef(null);
   const { tgWebAppData } = retrieveLaunchParams();
   const CHAT_ID = tgWebAppData.user.id;
-  const TOKEN = "7924776903:AAFSP4CPeYtblPpUHnuDAw1Bg5439k5ueSI";
+  const TOKEN = "8199906155:AAEH7o60xmeGbcVW8MJ3R9MgZBe3P79CZcY";
   const [downloadInfo, setDownloadInfo] = useState("");
   const [saveStatus, setSaveStatus] = useState({ error: "", success: "" });
   const [editValues, setEditValues] = useState(state);
@@ -44,18 +42,10 @@ const TemplatePage = () => {
   const fetchFileData = async () => {
     try {
       const response = await axios.get(`${URL_BACK}/templates/${id}`);
-      const fileData = response.data;
+      const { fileData, ...fileInfo } = response.data;
 
-      const svgResponse = await S3.send(
-        new GetObjectCommand({
-          Bucket: "betting",
-          Key: state.name,
-        })
-      );
-      const svg = await svgResponse.Body.transformToString();
-      setSvgContent(svg);
-
-      setEditValues(fileData);
+      setSvgContent(fileData);
+      setEditValues(fileInfo);
     } catch (error) {
       console.error("Ошибка при получении файла:", error);
       setError(
@@ -68,16 +58,6 @@ const TemplatePage = () => {
   useEffect(() => {
     fetchTags().then(setTagOptions).catch(console.error);
   }, []);
-
-  useEffect(() => {
-    if (!editValues.name) return;
-    S3.send(
-      new GetObjectCommand({
-        Bucket: "betting",
-        Key: editValues.name,
-      })
-    );
-  }, [editValues.name]);
 
   const sendImageToTelegram = async (blob) => {
     setLoader(true);

@@ -2,7 +2,7 @@ import { Telegraf, Markup } from "telegraf";
 
 // const webAppUrl = "https://warm-rabbit-69.loca.lt";
 const webAppUrl = "https://myfrontend.loca.lt";
-const TOKEN = "7924776903:AAFSP4CPeYtblPpUHnuDAw1Bg5439k5ueSI";
+const TOKEN = "8199906155:AAEH7o60xmeGbcVW8MJ3R9MgZBe3P79CZcY";
 const bot = new Telegraf(TOKEN);
 
 bot.command("start", (ctx) => {

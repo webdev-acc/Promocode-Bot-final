@@ -3,19 +3,17 @@ const {
   S3Client,
   DeleteObjectCommand,
   PutObjectCommand,
+  GetObjectCommand,
 } = require("@aws-sdk/client-s3");
-const ACCOUNT_ID = "a21b9f93a0f0bb65326925e6187bc383";
-const ACCESS_KEY_ID = "6fc8f764f7965ea3b6bb64a4e03db63e";
-const SECRET_ACCESS_KEY =
-  "65d5063d829cdf51ef7ff1158da0aa427e5169aea9bf9c2eaf63f1a2d0a9d140";
-const imageUrlPublic = `https://pub-7f23c6666b0142f79a3eef22e1d1e014.r2.dev`;
+require("dotenv").config();
+const imageUrlPublic = `https://mediafiles.promocode888starzbot.site`;
 
 const S3 = new S3Client({
   region: "auto",
-  endpoint: `https://${ACCOUNT_ID}.r2.cloudflarestorage.com`,
+  endpoint: `https://${process.env.ACCOUNT_ID}.r2.cloudflarestorage.com`,
   credentials: {
-    accessKeyId: ACCESS_KEY_ID,
-    secretAccessKey: SECRET_ACCESS_KEY,
+    accessKeyId: process.env.ACCESS_KEY_ID,
+    secretAccessKey: process.env.SECRET_ACCESS_KEY,
   },
 });
 
@@ -89,11 +87,19 @@ const getTemplateById = async (req, res) => {
     }
     const banner = bannerResult.rows[0];
 
-    // Получаем теги
     const tagsResult = await pool.query(
       "SELECT t.id, t.name FROM tags t JOIN banner_tag bt ON t.id = bt.tag_id WHERE bt.banner_id = $1",
       [id]
     );
+
+    const s3Response = await S3.send(
+      new GetObjectCommand({
+        Bucket: "betting",
+        Key: banner.name, // Имя файла в S3
+      })
+    );
+
+    const fileData = await s3Response.Body.transformToString();
 
     res.json({
       id: banner.id,
@@ -103,13 +109,13 @@ const getTemplateById = async (req, res) => {
       size: banner.size,
       type: banner.type,
       tags: tagsResult.rows,
+      fileData,
     });
   } catch (err) {
     console.error("Ошибка при получении баннера:", err.message);
     res.status(500).send("Ошибка сервера");
   }
 };
-
 const getTemplates = async (req, res) => {
   try {
     const { tags, type, size, language, page = 1, limit = 10 } = req.query;
@@ -177,46 +183,13 @@ const getTemplates = async (req, res) => {
   }
 };
 
-// Удаление баннеров по массиву ID
-// const deleteTemplates = async (req, res) => {
-//   try {
-//     const { ids } = req.body;
-
-//     if (!ids || !Array.isArray(ids) || ids.length === 0) {
-//       return res.status(400).json({ error: "Array of IDs is required" });
-//     }
-
-//     const query = `
-//       DELETE FROM banners
-//       WHERE id IN (${ids.map((_, index) => `$${index + 1}`).join(", ")})
-//       RETURNING *
-//     `;
-//     const params = ids;
-
-//     const result = await pool.query(query, params);
-
-//     if (result.rowCount === 0) {
-//       return res.status(404).json({ error: "No templates found" });
-//     }
-
-//     res.json({
-//       message: `Successfully deleted ${result.rowCount} template(s)`,
-//       deletedTemplates: result.rows,
-//     });
-//   } catch (err) {
-//     console.error("Ошибка при удалении:", err.message);
-//     res.status(500).json({ error: "Server error" });
-//   }
-// };
-
 const deleteTemplate = async (req, res) => {
   const client = await pool.connect();
   try {
-    const { bannerId } = req.params; // Предполагаем, что ID баннера приходит в параметрах URL
+    const { bannerId } = req.params;
 
     await client.query("BEGIN");
 
-    // Получаем информацию о баннере для получения fileKey
     const bannerResult = await client.query(
       "SELECT name FROM banners WHERE id = $1",
       [bannerId]
@@ -228,21 +201,17 @@ const deleteTemplate = async (req, res) => {
 
     const fileKey = bannerResult.rows[0].name;
 
-    // Удаляем связи с тегами
     await client.query("DELETE FROM banner_tag WHERE banner_id = $1", [
       bannerId,
     ]);
 
-    // Удаляем сам баннер из таблицы banners
     await client.query("DELETE FROM banners WHERE id = $1", [bannerId]);
 
-    // Параметры для удаления из S3
     const deleteParams = {
       Bucket: "betting",
       Key: fileKey,
     };
 
-    // Удаляем файл из S3
     await S3.send(new DeleteObjectCommand(deleteParams));
 
     await client.query("COMMIT");
@@ -256,7 +225,6 @@ const deleteTemplate = async (req, res) => {
   }
 };
 
-// Обновление баннера по ID
 const updateTemplate = async (req, res) => {
   const client = await pool.connect();
   try {
