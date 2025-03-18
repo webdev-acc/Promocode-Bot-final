@@ -6,14 +6,18 @@ const {
   GetObjectCommand,
 } = require("@aws-sdk/client-s3");
 require("dotenv").config();
-const BUCKET_NAME = process.env.BUCKET_NAME;
+const BUCKET_NAME = 'promocode-bot';
+const ACCOUNT_ID = "1cca0fd4229edd2f754cea70c400023c";
+const ACCESS_KEY_ID = "732ffc7219a6f1e1797f6d5ead9fad61";
+const SECRET_ACCESS_KEY = "ae879174e5c16a53f8ff662dc544fd35b77c0fc10f949834fb339836ada7ff3b";
+const PUBLIC_URL = "https://mediafiles.promocode888starzbot.site";
 
 const S3 = new S3Client({
   region: "auto",
-  endpoint: `https://${process.env.ACCOUNT_ID}.r2.cloudflarestorage.com`,
+  endpoint: `https://${ACCOUNT_ID}.r2.cloudflarestorage.com`,
   credentials: {
-    accessKeyId: process.env.ACCESS_KEY_ID,
-    secretAccessKey: process.env.SECRET_ACCESS_KEY,
+    accessKeyId: ACCESS_KEY_ID,
+    secretAccessKey: SECRET_ACCESS_KEY,
   },
 });
 
@@ -46,7 +50,7 @@ const createTemplate = async (req, res) => {
     };
 
     await S3.send(new PutObjectCommand(uploadParams));
-    const imageUrl = `${process.env.PUBLIC_URL}/${fileKey}`;
+    const imageUrl = `${PUBLIC_URL}/${fileKey}`;
 
     const bannerResult = await client.query(
       "INSERT INTO banners (geo, language, type, size, url, name) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id",

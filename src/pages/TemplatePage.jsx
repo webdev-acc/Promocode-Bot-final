@@ -31,7 +31,7 @@ const TemplatePage = () => {
   const svgContainerRef = useRef(null);
   const { tgWebAppData } = retrieveLaunchParams();
   const CHAT_ID = tgWebAppData.user.id;
-  const TOKEN = "8199906155:AAEH7o60xmeGbcVW8MJ3R9MgZBe3P79CZcY";
+  const TOKEN = "7761331474:AAFrYS-1IjADnuRdmEsw74Q2fKtCW-IaY-Q";
   const [downloadInfo, setDownloadInfo] = useState("");
   const [saveStatus, setSaveStatus] = useState({ error: "", success: "" });
   const [editValues, setEditValues] = useState(state);
