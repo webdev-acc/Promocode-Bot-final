@@ -22,10 +22,12 @@ import { useAuth } from "../hooks/useAdmin";
 const TemplateListPage = () => {
   const [templatesList, setTemplatesList] = useState([]);
   const filters = useSelector(selectFilters);
-  const [tagOptions, setTagOptions] = useState([]);
-  const [typeOptions, setTypeOptions] = useState([]);
-  const [sizeOptions, setSizeOptions] = useState([]);
-  const [langOptions, setLangOptions] = useState([]);
+  const [filterOptions, setFilterOptions] = useState({
+    tags: [],
+    types: [],
+    sizes: [],
+    languages: [],
+  });
   const [totalPages, setTotalPages] = useState(1);
   const [removeId, setRemoveId] = useState(null);
   const dispatch = useDispatch();
@@ -62,48 +64,21 @@ const TemplateListPage = () => {
   const fetchFilesData = async (filesData) => {
     try {
       setTemplatesList(filesData);
-      const uniqueTypes = [...new Set(filesData.map((t) => t.type))].map(
-        (type) => ({
-          name: type,
-          value: type,
-        })
-      );
-      const uniqueSizes = [...new Set(filesData.map((t) => t.size))].map(
-        (size) => ({
-          name: size,
-          value: size,
-        })
-      );
-      const uniqueLangs = [...new Set(filesData.map((t) => t.language))].map(
-        (lang) => ({
-          name: lang,
-          value: lang,
-        })
-      );
-      const uniqueTags = [
-        ...new Set(filesData.flatMap((t) => t.tags.map((tag) => tag.id))),
-      ].map((id) => {
-        const tag = filesData.flatMap((t) => t.tags).find((t) => t.id === id);
-        return { name: tag.name, value: tag.id, id: tag.id };
-      });
-
-      setTypeOptions(uniqueTypes);
-      setSizeOptions(uniqueSizes);
-      setLangOptions(uniqueLangs);
-      setTagOptions(uniqueTags);
     } catch (error) {
       console.error("Ошибка при получении файлов из S3:", error);
     }
   };
 
   useEffect(() => {
-    axios.get(`${URL_BACK}/tags`).then(({ data }) => {
-      const tags = data.map((el) => {
-        return { name: el.name, value: el.id, id: el.id };
+    axios.get(`${URL_BACK}/filters`).then(({ data }) => {
+      setFilterOptions({
+        tags: data.tags,
+        types: data.types,
+        sizes: data.sizes,
+        languages: data.languages,
       });
-      setTagOptions(tags);
     });
-  }, []);
+  });
 
   useEffect(() => {
     axios
@@ -149,7 +124,7 @@ const TemplateListPage = () => {
           <InputSelect
             onChange={handleChangeFilters}
             value={filters.type}
-            options={typeOptions}
+            options={filterOptions.types}
             label="Type"
             name="type"
           />
@@ -158,7 +133,7 @@ const TemplateListPage = () => {
           <InputSelect
             onChange={handleChangeFilters}
             value={filters.tags}
-            options={tagOptions}
+            options={filterOptions.tags}
             label="Tags"
             name="tags"
             multi
@@ -168,7 +143,7 @@ const TemplateListPage = () => {
           <InputSelect
             onChange={handleChangeFilters}
             value={filters.size}
-            options={sizeOptions}
+            options={filterOptions.sizes}
             label="Size"
             name="size"
           />
@@ -180,10 +155,10 @@ const TemplateListPage = () => {
             value={filters.lang}
             label="Language"
             onChange={handleChangeFilters}
-            options={langOptions}
+            options={filterOptions.languages}
           />
         </Grid2>
-        <Button fullWidth onClick={handleResetFilters} variant="outlined">
+        <Button fullWidth onClick={handleResetFilters} variant="contained">
           Reset filters
         </Button>
       </Grid2>

@@ -6,10 +6,11 @@ const {
   GetObjectCommand,
 } = require("@aws-sdk/client-s3");
 require("dotenv").config();
-const BUCKET_NAME = 'promocode-bot';
+const BUCKET_NAME = "promocode-bot";
 const ACCOUNT_ID = "1cca0fd4229edd2f754cea70c400023c";
 const ACCESS_KEY_ID = "732ffc7219a6f1e1797f6d5ead9fad61";
-const SECRET_ACCESS_KEY = "ae879174e5c16a53f8ff662dc544fd35b77c0fc10f949834fb339836ada7ff3b";
+const SECRET_ACCESS_KEY =
+  "ae879174e5c16a53f8ff662dc544fd35b77c0fc10f949834fb339836ada7ff3b";
 const PUBLIC_URL = "https://mediafiles.promocode888starzbot.site";
 
 const S3 = new S3Client({
@@ -375,6 +376,55 @@ const incrementDownloadCount = async (req, res) => {
   }
 };
 
+const getFiltersOptions = async (req, res) => {
+  const client = await pool.connect();
+  try {
+    // Получаем уникальные значения для каждого поля
+    const sizesQuery = await client.query(
+      "SELECT DISTINCT size FROM banners WHERE size IS NOT NULL ORDER BY size"
+    );
+    const typesQuery = await client.query(
+      "SELECT DISTINCT type FROM banners WHERE type IS NOT NULL ORDER BY type"
+    );
+    const languagesQuery = await client.query(
+      "SELECT DISTINCT language FROM banners WHERE language IS NOT NULL ORDER BY language"
+    );
+    const tagsQuery = await client.query(`
+      SELECT DISTINCT t.id, t.name 
+      FROM tags t
+      JOIN banner_tag bt ON t.id = bt.tag_id
+      ORDER BY t.name
+    `);
+
+    const filtersOptions = {
+      sizes: sizesQuery.rows.map((row) => ({
+        name: row.size,
+        value: row.size,
+      })),
+      types: typesQuery.rows.map((row) => ({
+        name: row.type,
+        value: row.type,
+      })),
+      languages: languagesQuery.rows.map((row) => ({
+        name: row.language,
+        value: row.language,
+      })),
+      tags: tagsQuery.rows.map((row) => ({
+        id: row.id,
+        name: row.name,
+        value: row.id,
+      })),
+    };
+
+    res.json(filtersOptions);
+  } catch (err) {
+    console.error("Ошибка при получении опций фильтров:", err.message);
+    res.status(500).send("Ошибка сервера");
+  } finally {
+    client.release();
+  }
+};
+
 module.exports = {
   getTemplates,
   deleteTemplate,
@@ -384,4 +434,5 @@ module.exports = {
   getTypes,
   getSizes,
   incrementDownloadCount,
+  getFiltersOptions,
 };

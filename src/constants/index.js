@@ -1,6 +1,4 @@
-// export const URL_BACK = "https://mybackend.loca.lt";
 export const URL_BACK = "https://promocode888starzbot.site/api";
-// export const URL_BACK = "https://poor-zebras-work.loca.lt";
 export const TEMPLATE_SIZES = [
   "1920x1080",
   "1440x900",
