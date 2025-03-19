@@ -9,6 +9,7 @@ const {
   getSizes,
   getTemplateById,
   incrementDownloadCount,
+  getFiltersOptions,
 } = require("../controllers/bannerController");
 const upload = require("../middleware/upload");
 
@@ -19,6 +20,7 @@ router.post("/template", upload.single("img"), createTemplate);
 router.patch("/template/:id", upload.single("img"), updateTemplate);
 router.get("/types", getTypes);
 router.get("/sizes", getSizes);
+router.get("/filters", getFiltersOptions);
 router.post("/banners/:id/download", incrementDownloadCount);
 
 module.exports = router;

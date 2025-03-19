@@ -138,12 +138,7 @@ const AdminUsersPage = () => {
             ))}
           </Select>
         </FormControl>
-        <Button
-          sx={{ height: "60px" }}
-          onClick={handleAddNewUser}
-          color="primary"
-          variant="outlined"
-        >
+        <Button onClick={handleAddNewUser} color="primary" variant="contained">
           Add
         </Button>
       </Box>
@@ -153,10 +148,10 @@ const AdminUsersPage = () => {
           sx={{
             display: "flex",
             flexDirection: "column",
-            gap: 1,
             alignItems: "start",
             justifyContent: "space-between",
             position: "relative",
+            mb: 1,
           }}
         >
           <Stack sx={{ borderBottom: "1px solid grey", width: "80%" }}>

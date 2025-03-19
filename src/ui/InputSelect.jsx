@@ -39,7 +39,7 @@
 //     <FormControl fullWidth error={error}>
 //       <InputLabel id={`${name}-select-label`}>{label}</InputLabel>
 //       <Select
-      
+
 //         defaultValue={defaulValue}
 //         required={required}
 //         name={name}
@@ -115,11 +115,11 @@ export default function InputSelect({
   value,
   options,
   label,
-  multi = false, // По умолчанию одиночный выбор
+  multi = false,
   required = false,
   error = false,
   defaultValue,
-  existingTags = [], // Для множественного выбора с существующими тегами
+  existingTags = [],
   helperText,
   readOnly = false,
 }) {
@@ -129,7 +129,6 @@ export default function InputSelect({
     ? ""
     : value;
 
-  // Преобразование value в объекты для Autocomplete (если multi)
   const selectedOptions = multi
     ? validatedValue.map((val) => {
         const existingTag = existingTags.find((tag) => tag.id === val);
@@ -150,7 +149,7 @@ export default function InputSelect({
         id={`${name}-select`}
         options={options}
         getOptionLabel={(option) => option.name || option.value || option || ""}
-        value={multi ? selectedOptions : selectedOptions}
+        value={selectedOptions}
         defaultValue={defaultValue}
         onChange={(event, newValue) => {
           const newEvent = {
@@ -186,7 +185,7 @@ export default function InputSelect({
             );
           })
         }
-        filterSelectedOptions // Убирает выбранные опции из списка
+        filterSelectedOptions
       />
       {helperText && !error && (
         <Box component="p" sx={{ color: "text.secondary", mt: 1 }}>

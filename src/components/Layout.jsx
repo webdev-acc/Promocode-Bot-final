@@ -12,7 +12,7 @@ export default function Layout() {
   const [anchorEl, setAnchorEl] = useState(null);
   const navigate = useNavigate();
   const open = Boolean(anchorEl);
-  const { isAdmin, isUser } = useAuth();
+  const { isAdmin, isModerator } = useAuth();
   const { mode, setMode } = useColorScheme();
   const handleClick = (event) => {
     setAnchorEl(event.currentTarget);
@@ -50,7 +50,7 @@ export default function Layout() {
               Добавить администратора
             </MenuItem>
           )}
-          {!isUser && (
+          {(isAdmin || isModerator) && (
             <MenuItem onClick={() => handleClose("/add_template")}>
               Добавить новый креатив
             </MenuItem>
