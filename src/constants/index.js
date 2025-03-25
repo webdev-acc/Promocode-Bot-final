@@ -11,7 +11,13 @@ export const TEMPLATE_SIZES = [
   "414x896",
   "360x800",
 ];
-export const TEMPLATE_TYPES = ["Gambling", "Betting", "App", "Other"];
+export const TEMPLATE_TYPES = [
+  "Betting",
+  "App",
+  "Live-casino",
+  "Crash-game",
+  "Slots",
+];
 export const TEMPLATES_GEO = [
   "RU", // Россия
   "PL", // Польша
@@ -33,5 +39,13 @@ export const TEMPLATES_GEO = [
   "TR", // Турция
   "NL", // Нидерланды
   "SE", // Швеция
+  "LK", 
+  "UZ", 
+  "PT", 
+  "CI", 
+  "CM", 
+  "BD", 
+  "EG", 
+  "NG"
 ];
 export const USER_ROLES = ["Admin", "Moderator", "User"];
