@@ -302,7 +302,7 @@ const TemplatePage = () => {
               height: "100%",
               display: "block",
             },
-            "& svg text": { fontFamily: '"Roboto Flex", sans-serif' },
+           "& svg text": { fontFamily: '"Roboto", sans serif' },
           }}
         />
       ) : (

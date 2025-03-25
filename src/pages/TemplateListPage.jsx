@@ -78,7 +78,7 @@ const TemplateListPage = () => {
         languages: data.languages,
       });
     });
-  });
+  }, []);
 
   useEffect(() => {
     axios
