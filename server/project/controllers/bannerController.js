@@ -25,7 +25,7 @@ const S3 = new S3Client({
 const createTemplate = async (req, res) => {
   const client = await pool.connect();
   try {
-    const { geo, languages, type, size, tags } = req.body;
+    const { geo, languages, type, size, tags, date_from, date_to } = req.body;
     const tagsParse = JSON.parse(tags);
 
     if (!req.file) {
@@ -54,9 +54,22 @@ const createTemplate = async (req, res) => {
     const imageUrl = `${PUBLIC_URL}/${fileKey}`;
 
     const bannerResult = await client.query(
-      "INSERT INTO banners (geo, language, type, size, url, name) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id",
-      [geo, languages, type, size, imageUrl, fileKey]
+      `INSERT INTO banners 
+    (geo, language, type, size, url, name, date_from, date_to) 
+   VALUES ($1, $2, $3, $4, $5, $6, $7, $8) 
+   RETURNING id`,
+      [
+        geo,
+        languages,
+        type,
+        size,
+        imageUrl,
+        fileKey,
+        date_from || null,
+        date_to || null,
+      ]
     );
+
     const bannerId = bannerResult.rows[0].id;
 
     if (tagsParse && tagsParse.length > 0) {
@@ -242,7 +255,7 @@ const updateTemplate = async (req, res) => {
   const client = await pool.connect();
   try {
     const { id } = req.params;
-    const { geo, languages, type, size, tags } = req.body;
+    const { geo, languages, type, size, tags, date_from, date_to } = req.body;
     const tagsParse = tags ? JSON.parse(tags) : undefined;
 
     const existingBanner = await client.query(
@@ -303,6 +316,17 @@ const updateTemplate = async (req, res) => {
         );
         await Promise.all(tagInserts);
       }
+    }
+
+    if (date_from !== undefined) {
+      updateQuery += `date_from = $${paramIndex}, `;
+      params.push(date_from);
+      paramIndex++;
+    }
+    if (date_to !== undefined) {
+      updateQuery += `date_to = $${paramIndex}, `;
+      params.push(date_to);
+      paramIndex++;
     }
 
     await client.query("COMMIT");

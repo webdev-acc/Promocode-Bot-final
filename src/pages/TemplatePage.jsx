@@ -25,7 +25,6 @@ const TemplatePage = () => {
   const { id } = useParams();
   const { state } = useLocation();
   const [svgContent, setSvgContent] = useState("");
-  const [promocode, setPromocode] = useState("");
   const [error, setError] = useState("");
   const { isUser } = useAuth();
   const svgContainerRef = useRef(null);
@@ -38,6 +37,7 @@ const TemplatePage = () => {
   const { fetchTags } = useTemplateApi();
   const [tagOptions, setTagOptions] = useState([]);
   const [loader, setLoader] = useState(false);
+  const [promocodes, setPromocodes] = useState([""]);
 
   const fetchFileData = async () => {
     try {
@@ -59,8 +59,19 @@ const TemplatePage = () => {
     fetchTags().then(setTagOptions).catch(console.error);
   }, []);
 
-  const sendImageToTelegram = async (blob) => {
-    setLoader(true);
+  const handlePromocodeChange = (index, value) => {
+    setPromocodes((prev) => {
+      const newCodes = [...prev];
+      newCodes[index] = value;
+      return newCodes;
+    });
+  };
+
+  const addPromocodeField = () => {
+    setPromocodes((prev) => [...prev, ""]);
+  };
+
+  const sendImageToTelegram = async (blob, code) => {
     try {
       const fileInfo = [
         `Geo: ${editValues.geo}`,
@@ -68,8 +79,9 @@ const TemplatePage = () => {
         `Size: ${editValues.size}`,
         `Type: ${editValues.type}`,
         `Tags: ${editValues.tags.map((tag) => `#${tag.name}`).join(" ")}`,
-        `Promocode: ${promocode}`,
+        `Promocode: ${code}`,
       ].join("\n");
+
       const telegramFormData = new FormData();
       telegramFormData.append("chat_id", CHAT_ID);
       telegramFormData.append("document", blob, "image.png");
@@ -78,15 +90,10 @@ const TemplatePage = () => {
       await axios.post(
         `https://api.telegram.org/bot${TOKEN}/sendDocument`,
         telegramFormData,
-        {
-          headers: { "Content-Type": "multipart/form-data" },
-        }
+        { headers: { "Content-Type": "multipart/form-data" } }
       );
 
-      // Объединяем элементы списка с переносом строки
-
-      // Добавляем caption к запросу
-      setDownloadInfo("Файл отправлен в Telegram!");
+      setDownloadInfo("Файлы отправлены в Telegram!");
     } catch (err) {
       console.log("Ошибка при отправке в Telegram:", err.message || err);
       setDownloadInfo(
@@ -100,38 +107,49 @@ const TemplatePage = () => {
   const downloadSVGAsPNG = async () => {
     const svgContainer = svgContainerRef.current;
     if (!svgContainer) return;
-
-    const tempContainer = svgContainer.cloneNode(true);
+    setLoader(true);
 
     const fullHDWidth = 1920;
     const aspectRatio = svgContainer.offsetHeight / svgContainer.offsetWidth;
     const fullHDHeight = Math.round(fullHDWidth * aspectRatio);
 
-    tempContainer.style.position = "absolute";
-    tempContainer.style.top = "-9999px";
-    tempContainer.style.left = "-9999px";
-    tempContainer.style.width = `${fullHDWidth}px`;
-    tempContainer.style.height = `${fullHDHeight}px`;
+    for (const code of promocodes) {
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(svgContent, "image/svg+xml");
+      const textElement = doc.getElementById("PROMOCODE");
+      if (textElement) {
+        const tspan = textElement.querySelector("tspan");
+        if (tspan) tspan.textContent = code;
+      }
+      const updatedSVG = new XMLSerializer().serializeToString(doc);
 
-    document.body.appendChild(tempContainer);
+      const tempContainer = svgContainer.cloneNode(true);
+      tempContainer.innerHTML = updatedSVG;
+      tempContainer.style.position = "absolute";
+      tempContainer.style.top = "-9999px";
+      tempContainer.style.left = "-9999px";
+      tempContainer.style.width = `${fullHDWidth}px`;
+      tempContainer.style.height = `${fullHDHeight}px`;
 
-    try {
-      const scale = 1;
-      const canvas = await html2canvas(tempContainer, {
-        backgroundColor: null,
-        scale,
-        width: fullHDWidth,
-        height: fullHDHeight,
-        useCORS: true,
-      });
+      document.body.appendChild(tempContainer);
 
-      const blob = await new Promise((resolve) =>
-        canvas.toBlob(resolve, "image/png", 1.0)
-      );
-      await axios.post(`${URL_BACK}/banners/${id}/download`);
-      await sendImageToTelegram(blob);
-    } finally {
-      document.body.removeChild(tempContainer);
+      try {
+        const canvas = await html2canvas(tempContainer, {
+          backgroundColor: null,
+          scale: 1,
+          width: fullHDWidth,
+          height: fullHDHeight,
+          useCORS: true,
+        });
+
+        const blob = await new Promise((resolve) =>
+          canvas.toBlob(resolve, "image/png", 1.0)
+        );
+        await axios.post(`${URL_BACK}/banners/${id}/download`);
+        await sendImageToTelegram(blob, code);
+      } finally {
+        document.body.removeChild(tempContainer);
+      }
     }
   };
 
@@ -150,10 +168,10 @@ const TemplatePage = () => {
 
     if (textElement) {
       const tspan = textElement.querySelector("tspan");
-      if (tspan) tspan.textContent = promocode;
+      if (tspan) tspan.textContent = promocodes[0] || "";
       setSvgContent(new XMLSerializer().serializeToString(doc));
     }
-  }, [promocode]);
+  }, [promocodes]);
 
   const handleChangeValues = (event) => {
     const { name, value } = event.target;
@@ -193,6 +211,9 @@ const TemplatePage = () => {
         const tagIds = editValues.tags.map((tag) => tag.id);
         formData.append("tags", JSON.stringify(tagIds));
       }
+      if (editValues.date_from)
+        formData.append("date_from", editValues.date_from);
+      if (editValues.date_to) formData.append("date_to", editValues.date_to);
 
       await axios.patch(`${URL_BACK}/template/${id}`, formData, {
         headers: {
@@ -302,21 +323,28 @@ const TemplatePage = () => {
               height: "100%",
               display: "block",
             },
-           "& svg text": { fontFamily: '"Roboto", sans serif' },
+            "& svg text": { fontFamily: '"Roboto", sans serif' },
           }}
         />
       ) : (
         <Typography>Загрузка изображения...</Typography>
       )}
 
-      <TextField
-        value={promocode}
-        label="Enter promocode..."
-        onChange={(e) => setPromocode(e.target.value)}
-        color="warning"
-        fullWidth
-        sx={{ maxWidth: 700, my: 2 }}
-      />
+      {promocodes.map((code, index) => (
+        <TextField
+          key={index}
+          value={code}
+          label={`Промокод ${index + 1}`}
+          onChange={(e) => handlePromocodeChange(index, e.target.value)}
+          color="warning"
+          fullWidth
+          sx={{ maxWidth: 700, my: 1 }}
+        />
+      ))}
+      <Button onClick={addPromocodeField} sx={{ mb: 2 }}>
+        Добавить ещё промокод
+      </Button>
+
       <Button
         loading={loader}
         fullWidth

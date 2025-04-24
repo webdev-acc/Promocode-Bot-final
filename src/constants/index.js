@@ -39,13 +39,13 @@ export const TEMPLATES_GEO = [
   "TR", // Турция
   "NL", // Нидерланды
   "SE", // Швеция
-  "LK", 
-  "UZ", 
-  "PT", 
-  "CI", 
-  "CM", 
-  "BD", 
-  "EG", 
-  "NG"
+  "LK",
+  "UZ",
+  "PT",
+  "CI",
+  "CM",
+  "BD",
+  "EG",
+  "NG",
 ];
 export const USER_ROLES = ["Admin", "Moderator", "User"];
