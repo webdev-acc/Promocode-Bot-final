@@ -134,6 +134,8 @@ const getTemplateById = async (req, res) => {
       size: banner.size,
       type: banner.type,
       tags: tagsResult.rows,
+      date_from: banner.date_from, 
+      date_to: banner.date_to, 
       fileData,
     });
   } catch (err) {

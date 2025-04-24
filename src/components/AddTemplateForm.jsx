@@ -82,8 +82,6 @@ const AddTemplateForm = () => {
     formData.append("date_from", data.date_from);
     formData.append("date_to", data.date_to);
 
-    console.log(data.date_to);
-
     try {
       await uploadTemplate(formData);
       setSuccessInfo("Креатив успешно загружен");

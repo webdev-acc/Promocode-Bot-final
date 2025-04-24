@@ -20,6 +20,9 @@ import { useTemplateApi } from "../hooks/useTemplateApi";
 import { TEMPLATE_SIZES, TEMPLATES_GEO, URL_BACK } from "../constants";
 import { languagesToArray } from "../helpers/languagesToArray";
 import { useAuth } from "../hooks/useAdmin";
+import { LocalizationProvider, MobileDatePicker } from "@mui/x-date-pickers";
+import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
+import dayjs from "dayjs";
 
 const TemplatePage = () => {
   const { id } = useParams();
@@ -306,6 +309,32 @@ const TemplatePage = () => {
             onChange={handleChangeValues}
             existingTags={editValues.tags}
           />
+          <LocalizationProvider dateAdapter={AdapterDayjs}>
+            <MobileDatePicker
+              label="Date from"
+              value={dayjs(editValues.date_from)}
+              onChange={(date) =>
+                handleChangeValues({
+                  target: {
+                    name: "date_from",
+                    value: date ? date.toISOString() : "",
+                  },
+                })
+              }
+            />
+            <MobileDatePicker
+              label="Date to"
+              value={dayjs(editValues.date_to)}
+              onChange={(date) =>
+                handleChangeValues({
+                  target: {
+                    name: "date_to",
+                    value: date ? date.toISOString() : "",
+                  },
+                })
+              }
+            />
+          </LocalizationProvider>
           {!isUser && <Button onClick={handleSaveChanges}>Save changes</Button>}
         </AccordionDetails>
       </Accordion>
