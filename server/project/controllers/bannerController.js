@@ -134,8 +134,8 @@ const getTemplateById = async (req, res) => {
       size: banner.size,
       type: banner.type,
       tags: tagsResult.rows,
-      date_from: banner.date_from, 
-      date_to: banner.date_to, 
+      date_from: banner.date_from,
+      date_to: banner.date_to,
       fileData,
     });
   } catch (err) {
@@ -297,6 +297,16 @@ const updateTemplate = async (req, res) => {
       params.push(size);
       paramIndex++;
     }
+    if (date_from !== undefined) {
+      updateQuery += `date_from = $${paramIndex}, `;
+      params.push(date_from);
+      paramIndex++;
+    }
+    if (date_to !== undefined) {
+      updateQuery += `date_to = $${paramIndex}, `;
+      params.push(date_to);
+      paramIndex++;
+    }
 
     if (paramIndex > 1) {
       updateQuery = updateQuery.slice(0, -2); // Удаляем лишнюю запятую и пробел
@@ -318,17 +328,6 @@ const updateTemplate = async (req, res) => {
         );
         await Promise.all(tagInserts);
       }
-    }
-
-    if (date_from !== undefined) {
-      updateQuery += `date_from = $${paramIndex}, `;
-      params.push(date_from);
-      paramIndex++;
-    }
-    if (date_to !== undefined) {
-      updateQuery += `date_to = $${paramIndex}, `;
-      params.push(date_to);
-      paramIndex++;
     }
 
     await client.query("COMMIT");
