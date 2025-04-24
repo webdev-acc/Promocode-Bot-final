@@ -158,6 +158,8 @@ const getTemplates = async (req, res) => {
     `;
     let params = [];
 
+    query += " AND (banners.date_to IS NULL OR banners.date_to >= NOW())";
+
     if (type) {
       query += " AND banners.type = $" + (params.length + 1);
       params.push(type);
@@ -190,15 +192,44 @@ const getTemplates = async (req, res) => {
 
     const result = await pool.query(query, params);
 
-    const totalCountResult = await pool.query(`
+    let countQuery = `
       SELECT COUNT(DISTINCT banners.id) AS count
       FROM banners
       LEFT JOIN banner_tag ON banners.id = banner_tag.banner_id
       LEFT JOIN tags ON banner_tag.tag_id = tags.id
       WHERE 1=1
-    `);
+      AND (banners.date_to IS NULL OR banners.date_to >= NOW())
+    `;
+    let countParams = [];
 
-    const totalCount = totalCountResult.rows[0].count;
+    if (type) {
+      countQuery += " AND banners.type = $" + (countParams.length + 1);
+      countParams.push(type);
+    }
+    if (size) {
+      countQuery += " AND banners.size = $" + (countParams.length + 1);
+      countParams.push(size);
+    }
+    if (language) {
+      countQuery += " AND banners.language ILIKE $" + (countParams.length + 1);
+      countParams.push(language);
+    }
+    if (tags) {
+      const tagArray = tags.split(",").map((tag) => parseInt(tag, 10));
+      if (tagArray.length > 0) {
+        const placeholders = tagArray.map(
+          (_, index) => `$${countParams.length + index + 1}`
+        );
+        countQuery += ` AND banner_tag.tag_id IN (${placeholders.join(", ")})`;
+        countParams.push(...tagArray);
+        countQuery += ` GROUP BY banners.id HAVING COUNT(DISTINCT banner_tag.tag_id) = ${tagArray.length}`;
+      }
+    }
+
+    const totalCountResult = await pool.query(countQuery, countParams);
+
+    const totalCount =
+      totalCountResult.rows.length > 0 ? totalCountResult.rows[0].count : 0;
     const totalPages = Math.ceil(totalCount / limit);
 
     res.json({
