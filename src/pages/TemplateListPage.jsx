@@ -7,6 +7,8 @@ import { useDispatch, useSelector } from "react-redux";
 import {
   resetFilters,
   selectFilters,
+  setDateFrom,
+  setDateTo,
   setLang,
   setPage,
   setSize,
@@ -18,6 +20,9 @@ import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 import { URL_BACK } from "../constants";
 import AcceptActionDialog from "../components/AcceptActionDialog";
 import { useAuth } from "../hooks/useAdmin";
+import dayjs from "dayjs";
+import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
+import { LocalizationProvider, MobileDatePicker } from "@mui/x-date-pickers";
 
 const TemplateListPage = () => {
   const [templatesList, setTemplatesList] = useState([]);
@@ -43,6 +48,8 @@ const TemplateListPage = () => {
     if (name === "type") dispatch(setType(value));
     if (name === "size") dispatch(setSize(value));
     if (name === "lang") dispatch(setLang(value));
+    if (name === "date_from") dispatch(setDateFrom(value));
+    if (name === "date_to") dispatch(setDateTo(value));
   };
 
   const handleResetFilters = () => {
@@ -83,7 +90,7 @@ const TemplateListPage = () => {
   useEffect(() => {
     axios
       .get(
-        `${URL_BACK}/templates?type=${filters.type}&size=${filters.size}&language=${filters.lang}&tags=${filters.tags}&page=${filters.page}&limit=${filters.limit}`
+        `${URL_BACK}/templates?type=${filters.type}&size=${filters.size}&language=${filters.lang}&tags=${filters.tags}&page=${filters.page}&limit=${filters.limit}&date_from=${filters.date_from}&date_to=${filters.date_to}`
       )
       .then(({ data }) => {
         fetchFilesData(data.data);
@@ -111,98 +118,137 @@ const TemplateListPage = () => {
   };
 
   return (
-    <Box mt={2} display="flex" flexDirection="column" alignItems="center">
-      <AcceptActionDialog
-        handleClose={() => setOpenDialog(false)}
-        handleAccept={onAcceptRemoveClick}
-        open={openDialog}
-        target={targetName}
-      />
-      {/* Фильтры */}
-      <Grid2 container spacing={2} width="100%">
-        <Grid2 size={6}>
-          <InputSelect
-            onChange={handleChangeFilters}
-            value={filters.type}
-            options={filterOptions.types}
-            label="Type"
-            name="type"
-          />
+    <LocalizationProvider dateAdapter={AdapterDayjs}>
+      <Box mt={2} display="flex" flexDirection="column" alignItems="center">
+        <AcceptActionDialog
+          handleClose={() => setOpenDialog(false)}
+          handleAccept={onAcceptRemoveClick}
+          open={openDialog}
+          target={targetName}
+        />
+        {/* Фильтры */}
+        <Grid2 container spacing={2} width="100%">
+          <Grid2 size={6}>
+            <InputSelect
+              onChange={handleChangeFilters}
+              value={filters.type}
+              options={filterOptions.types}
+              label="Type"
+              name="type"
+            />
+          </Grid2>
+          <Grid2 size={6}>
+            <InputSelect
+              onChange={handleChangeFilters}
+              value={filters.tags}
+              options={filterOptions.tags}
+              label="Tags"
+              name="tags"
+              multi
+            />
+          </Grid2>
+          <Grid2 size={6}>
+            <InputSelect
+              onChange={handleChangeFilters}
+              value={filters.size}
+              options={filterOptions.sizes}
+              label="Size"
+              name="size"
+            />
+          </Grid2>
+          <Grid2 size={6}>
+            <InputSelect
+              required
+              name="lang"
+              value={filters.lang}
+              label="Language"
+              onChange={handleChangeFilters}
+              options={filterOptions.languages}
+            />
+          </Grid2>
+          <Grid2 size={6}>
+            <MobileDatePicker
+              sx={{ maxWidth: "100%" }}
+              label="Date from"
+              value={filters.date_from ? dayjs(filters.date_from) : null}
+              disablePast
+              onChange={(date) =>
+                handleChangeFilters({
+                  target: {
+                    name: "date_from",
+                    value: date ? date.toISOString() : "",
+                  },
+                })
+              }
+            />
+          </Grid2>
+          <Grid2 size={6}>
+            <MobileDatePicker
+              sx={{ maxWidth: "100%" }}
+              label="Date to"
+              value={filters.date_from ? dayjs(filters.date_to) : null}
+              disablePast
+              onChange={(date) =>
+                handleChangeFilters({
+                  target: {
+                    name: "date_to",
+                    value: date ? date.toISOString() : "",
+                  },
+                })
+              }
+            />
+          </Grid2>
+          <Button fullWidth onClick={handleResetFilters} variant="contained">
+            Reset filters
+          </Button>
         </Grid2>
-        <Grid2 size={6}>
-          <InputSelect
-            onChange={handleChangeFilters}
-            value={filters.tags}
-            options={filterOptions.tags}
-            label="Tags"
-            name="tags"
-            multi
-          />
-        </Grid2>
-        <Grid2 size={6}>
-          <InputSelect
-            onChange={handleChangeFilters}
-            value={filters.size}
-            options={filterOptions.sizes}
-            label="Size"
-            name="size"
-          />
-        </Grid2>
-        <Grid2 size={6}>
-          <InputSelect
-            required
-            name="lang"
-            value={filters.lang}
-            label="Language"
-            onChange={handleChangeFilters}
-            options={filterOptions.languages}
-          />
-        </Grid2>
-        <Button fullWidth onClick={handleResetFilters} variant="contained">
-          Reset filters
-        </Button>
-      </Grid2>
-      {/* Список карточек */}
-      {
-        <Box width="100%">
-          {!templatesList.length && (
-            <Typography mt={5} width="100%" textAlign="center" variant="h5">
-              Empty
-            </Typography>
-          )}
-          {templatesList?.map((template) => (
-            <Box key={template.id} sx={{ flexGrow: 1, overflow: "hidden" }}>
-              <TemplateCard
-                template={template}
-                removeBtnClick={(event) =>
-                  onRemoveBtnClick(event, template.id, template.name)
-                }
-                showRemoveBtn={!isUser}
-              />
-            </Box>
-          ))}
-        </Box>
-      }
-      {/* Пагинация */}
-      {templatesList.length ? (
-        <Box display="flex" justifyContent="center" alignItems="center" mt={3}>
-          <IconButton onClick={handlePrevPage} disabled={filters.page === 1}>
-            <ChevronLeftIcon />
-          </IconButton>
-          <Typography>
-            Page {filters.page} / {totalPages}
-          </Typography>
-          <IconButton
-            onClick={handleNextPage}
-            disabled={filters.page >= totalPages}
+        {/* Список карточек */}
+        {
+          <Box width="100%">
+            {!templatesList.length && (
+              <Typography mt={5} width="100%" textAlign="center" variant="h5">
+                Empty
+              </Typography>
+            )}
+            {templatesList?.map((template) => (
+              <Box key={template.id} sx={{ flexGrow: 1, overflow: "hidden" }}>
+                <TemplateCard
+                  template={template}
+                  removeBtnClick={(event) =>
+                    onRemoveBtnClick(event, template.id, template.name)
+                  }
+                  showRemoveBtn={!isUser}
+                />
+              </Box>
+            ))}
+          </Box>
+        }
+        {/* Пагинация */}
+        {templatesList.length ? (
+          <Box
+            display="flex"
+            justifyContent="center"
+            alignItems="center"
+            mt={3}
           >
-            <ChevronRightIcon />
-          </IconButton>
-        </Box>
-      ) : (
-        ""
-      )}
-    </Box>
+            <IconButton onClick={handlePrevPage} disabled={filters.page === 1}>
+              <ChevronLeftIcon />
+            </IconButton>
+            <Typography>
+              Page {filters.page} / {totalPages}
+            </Typography>
+            <IconButton
+              onClick={handleNextPage}
+              disabled={filters.page >= totalPages}
+            >
+              <ChevronRightIcon />
+            </IconButton>
+          </Box>
+        ) : (
+          ""
+        )}
+      </Box>
+    </LocalizationProvider>
   );
 };
 

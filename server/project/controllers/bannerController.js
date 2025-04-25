@@ -146,7 +146,16 @@ const getTemplateById = async (req, res) => {
 
 const getTemplates = async (req, res) => {
   try {
-    const { tags, type, size, language, page = 1, limit = 10 } = req.query;
+    const {
+      tags,
+      type,
+      size,
+      language,
+      date_from,
+      date_to,
+      page = 1,
+      limit = 10,
+    } = req.query;
     let query = `
       SELECT 
         banners.*, 
@@ -160,16 +169,30 @@ const getTemplates = async (req, res) => {
 
     query += " AND (banners.date_to IS NULL OR banners.date_to >= NOW())";
 
+    if (date_from) {
+      query += ` AND (banners.date_from >= $${
+        params.length + 1
+      } OR banners.date_from IS NULL)`;
+      params.push(date_from);
+    }
+
+    if (date_to) {
+      query += ` AND (banners.date_to <= $${
+        params.length + 1
+      } OR banners.date_to IS NULL)`;
+      params.push(date_to);
+    }
+
     if (type) {
-      query += " AND banners.type = $" + (params.length + 1);
+      query += ` AND banners.type = $${params.length + 1}`;
       params.push(type);
     }
     if (size) {
-      query += " AND banners.size = $" + (params.length + 1);
+      query += ` AND banners.size = $${params.length + 1}`;
       params.push(size);
     }
     if (language) {
-      query += " AND banners.language ILIKE $" + (params.length + 1);
+      query += ` AND banners.language ILIKE $${params.length + 1}`;
       params.push(language);
     }
     if (tags) {
@@ -192,6 +215,7 @@ const getTemplates = async (req, res) => {
 
     const result = await pool.query(query, params);
 
+    // Запрос для подсчёта общего количества
     let countQuery = `
       SELECT COUNT(DISTINCT banners.id) AS count
       FROM banners
@@ -202,16 +226,30 @@ const getTemplates = async (req, res) => {
     `;
     let countParams = [];
 
+    if (date_from) {
+      countQuery += ` AND (banners.date_from >= $${
+        countParams.length + 1
+      } OR banners.date_from IS NULL)`;
+      countParams.push(date_from);
+    }
+
+    if (date_to) {
+      countQuery += ` AND (banners.date_to <= $${
+        countParams.length + 1
+      } OR banners.date_to IS NULL)`;
+      countParams.push(date_to);
+    }
+
     if (type) {
-      countQuery += " AND banners.type = $" + (countParams.length + 1);
+      countQuery += ` AND banners.type = $${countParams.length + 1}`;
       countParams.push(type);
     }
     if (size) {
-      countQuery += " AND banners.size = $" + (countParams.length + 1);
+      countQuery += ` AND banners.size = $${countParams.length + 1}`;
       countParams.push(size);
     }
     if (language) {
-      countQuery += " AND banners.language ILIKE $" + (countParams.length + 1);
+      countQuery += ` AND banners.language ILIKE $${countParams.length + 1}`;
       countParams.push(language);
     }
     if (tags) {

@@ -313,6 +313,7 @@ const TemplatePage = () => {
             <MobileDatePicker
               label="Date from"
               value={dayjs(editValues.date_from)}
+              disablePast
               onChange={(date) =>
                 handleChangeValues({
                   target: {
@@ -325,6 +326,7 @@ const TemplatePage = () => {
             <MobileDatePicker
               label="Date to"
               value={dayjs(editValues.date_to)}
+              disablePast
               onChange={(date) =>
                 handleChangeValues({
                   target: {

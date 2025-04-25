@@ -208,6 +208,7 @@ const AddTemplateForm = () => {
                 render={({ field }) => (
                   <MobileDatePicker
                     label="Date From"
+                    disablePast
                     value={field.value || null}
                     onChange={(date) => field.onChange(date)}
                     renderInput={(params) => <TextField {...params} />}
@@ -221,6 +222,7 @@ const AddTemplateForm = () => {
                   <MobileDatePicker
                     label="Date To"
                     value={field.value || null}
+                    disablePast
                     onChange={(date) => field.onChange(date)}
                     renderInput={(params) => <TextField {...params} />}
                   />
