@@ -176,16 +176,12 @@ const getTemplates = async (req, res) => {
     query += " AND (banners.date_to IS NULL OR banners.date_to >= NOW())";
 
     if (date_from) {
-      query += ` AND (banners.date_from >= $${
-        params.length + 1
-      } OR banners.date_from IS NULL)`;
+      query += ` AND banners.date_from >= $${params.length + 1}`;
       params.push(date_from);
     }
 
     if (date_to) {
-      query += ` AND (banners.date_to <= $${
-        params.length + 1
-      } OR banners.date_to IS NULL)`;
+      query += ` AND banners.date_to <= $${params.length + 1}`;
       params.push(date_to);
     }
 
