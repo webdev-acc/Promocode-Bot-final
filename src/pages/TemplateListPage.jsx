@@ -90,7 +90,13 @@ const TemplateListPage = () => {
   useEffect(() => {
     axios
       .get(
-        `${URL_BACK}/templates?type=${filters.type}&size=${filters.size}&language=${filters.lang}&tags=${filters.tags}&page=${filters.page}&limit=${filters.limit}&date_from=${filters.date_from}&date_to=${filters.date_to}`
+        `${URL_BACK}/templates?type=${filters.type}&size=${
+          filters.size
+        }&language=${filters.lang}&tags=${filters.tags}&page=${
+          filters.page
+        }&limit=${filters.limit}&date_from=${
+          filters.date_from ? filters.date_from : ""
+        }&date_to=${filters.date_to ? filters.date_to : ""}`
       )
       .then(({ data }) => {
         fetchFilesData(data.data);
