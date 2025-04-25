@@ -145,7 +145,7 @@ const getTemplateById = async (req, res) => {
 };
 
 const isValidDate = (dateStr) => {
-  if (!dateStr || dateStr === "null") return false;
+  if (dateStr && dateStr !== "null") return false;
   return new Date(dateStr).toISOString() === dateStr;
 };
 
