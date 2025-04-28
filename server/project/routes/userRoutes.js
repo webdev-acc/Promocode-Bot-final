@@ -10,7 +10,7 @@ const {
 } = require("../controllers/userController");
 
 router.post("/newUser", createUser);
-router.patch("//users/:id", updateUser);
+router.patch("/users/:id", updateUser);
 router.delete("/deleteUser/:name", deleteUser);
 router.patch("/deleteUser/:name", editUser);
 router.get("/users", getUsers);
