@@ -91,7 +91,7 @@ const AdminUsersPage = () => {
     try {
       const user = userList.find((u) => u.id === userId);
 
-      await axios.patch(`${URL_BACK}/users/${user.id}`, {
+      await axios.patch(`${URL_BACK}/editUser/${user.id}`, {
         userName: editedUser.userName,
         email: editedUser.email,
         role: editedUser.role,
