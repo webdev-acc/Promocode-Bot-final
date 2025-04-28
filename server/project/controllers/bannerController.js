@@ -144,12 +144,6 @@ const getTemplateById = async (req, res) => {
   }
 };
 
-const isValidDate = (dateStr) => {
-  // Check if the date string is valid ISO 8601 and not "null"
-  if (!dateStr || dateStr === "null") return false;
-  return new Date(dateStr).toISOString() === dateStr;
-};
-
 const getTemplates = async (req, res) => {
   try {
     const {
@@ -175,13 +169,21 @@ const getTemplates = async (req, res) => {
 
     query += " AND (banners.date_to IS NULL OR banners.date_to >= NOW())";
 
-    if (date_from) {
-      query += ` AND banners.date_from >= $${params.length + 1}`;
-      params.push(date_from);
-    }
+    if (date_from && date_to) {
+      query += ` AND banners.date_from <= $${params.length + 1}`;
+      params.push(date_to);
 
-    if (date_to) {
-      query += ` AND banners.date_to <= $${params.length + 1}`;
+      query += ` AND (banners.date_to IS NULL OR banners.date_to >= $${
+        params.length + 1
+      })`;
+      params.push(date_from);
+    } else if (date_from) {
+      query += ` AND (banners.date_to IS NULL OR banners.date_to >= $${
+        params.length + 1
+      })`;
+      params.push(date_from);
+    } else if (date_to) {
+      query += ` AND banners.date_from <= $${params.length + 1}`;
       params.push(date_to);
     }
 
@@ -228,17 +230,21 @@ const getTemplates = async (req, res) => {
     `;
     let countParams = [];
 
-    if (date_from) {
-      countQuery += ` AND (banners.date_from >= $${
-        countParams.length + 1
-      } OR banners.date_from IS NULL)`;
-      countParams.push(date_from);
-    }
+    if (date_from && date_to) {
+      countQuery += ` AND banners.date_from <= $${countParams.length + 1}`;
+      countParams.push(date_to);
 
-    if (date_to) {
-      countQuery += ` AND (banners.date_to <= $${
+      countQuery += ` AND (banners.date_to IS NULL OR banners.date_to >= $${
         countParams.length + 1
-      } OR banners.date_to IS NULL)`;
+      })`;
+      countParams.push(date_from);
+    } else if (date_from) {
+      countQuery += ` AND (banners.date_to IS NULL OR banners.date_to >= $${
+        countParams.length + 1
+      })`;
+      countParams.push(date_from);
+    } else if (date_to) {
+      countQuery += ` AND banners.date_from <= $${countParams.length + 1}`;
       countParams.push(date_to);
     }
 
