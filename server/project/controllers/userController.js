@@ -85,6 +85,68 @@ const updateUser = async (req, res) => {
   }
 };
 
+const editUser = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { userName, email, role } = req.body;
+
+    if (!id) {
+      return res.status(400).json({ message: "Не передан id пользователя" });
+    }
+
+    const existingUser = await pool.query("SELECT * FROM users WHERE id = $1", [
+      id,
+    ]);
+
+    if (existingUser.rows.length === 0) {
+      return res.status(404).json({ message: "Пользователь не найден" });
+    }
+
+    const fields = [];
+    const values = [];
+    let index = 1;
+
+    if (userName) {
+      fields.push(`name = $${index++}`);
+      values.push(userName);
+    }
+    if (email) {
+      fields.push(`email = $${index++}`);
+      values.push(email);
+    }
+    if (role) {
+      const validRoles = ["admin", "user", "moderator"];
+      if (!validRoles.includes(role)) {
+        return res
+          .status(400)
+          .json({ message: "Недопустимая роль пользователя" });
+      }
+      fields.push(`role = $${index++}`);
+      values.push(role);
+    }
+
+    if (fields.length === 0) {
+      return res.status(400).json({ message: "Нет данных для обновления" });
+    }
+
+    values.push(id); // id для WHERE
+
+    const query = `
+      UPDATE users
+      SET ${fields.join(", ")}
+      WHERE id = $${index}
+      RETURNING *
+    `;
+
+    const result = await pool.query(query, values);
+
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error("Ошибка при редактировании пользователя:", err.message);
+    res.status(500).send("Ошибка сервера");
+  }
+};
+
 // Удаление пользователя по имени
 const deleteUser = async (req, res) => {
   try {
@@ -156,4 +218,5 @@ module.exports = {
   deleteUser,
   getUsers,
   checkUserAccess,
+  editUser,
 };

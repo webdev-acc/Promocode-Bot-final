@@ -79,8 +79,8 @@ const AddTemplateForm = () => {
     formData.append("size", data.size);
     formData.append("img", data.img);
     formData.append("tags", JSON.stringify(data.tags));
-    formData.append("date_from", data.date_from);
-    formData.append("date_to", data.date_to);
+    formData.append("date_from", data.date_from ?? "");
+    formData.append("date_to", data.date_to ?? "");
 
     try {
       await uploadTemplate(formData);

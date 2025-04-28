@@ -6,11 +6,13 @@ const {
   deleteUser,
   getUsers,
   checkUserAccess,
+  editUser,
 } = require("../controllers/userController");
 
 router.post("/newUser", createUser);
-router.patch("/updateUser", updateUser);
+router.patch("//users/:id", updateUser);
 router.delete("/deleteUser/:name", deleteUser);
+router.patch("/deleteUser/:name", editUser);
 router.get("/users", getUsers);
 router.get("/user_access/:name/:id", checkUserAccess);
 
