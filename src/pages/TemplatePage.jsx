@@ -24,6 +24,8 @@ import { LocalizationProvider, MobileDatePicker } from "@mui/x-date-pickers";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import dayjs from "dayjs";
 
+const MAX_PROMOCODES = 20;
+
 const TemplatePage = () => {
   const { id } = useParams();
   const { state } = useLocation();
@@ -71,7 +73,15 @@ const TemplatePage = () => {
   };
 
   const addPromocodeField = () => {
+    if (promocodes.length >= MAX_PROMOCODES) {
+      setError("Нельзя добавить больше 20 промокодов");
+      return;
+    }
     setPromocodes((prev) => [...prev, ""]);
+  };
+
+  const removePromocodeField = (index) => {
+    setPromocodes((prev) => prev.filter((_, i) => i !== index));
   };
 
   const sendImageToTelegram = async (blob, code) => {
@@ -312,6 +322,7 @@ const TemplatePage = () => {
           <LocalizationProvider dateAdapter={AdapterDayjs}>
             <MobileDatePicker
               label="Date from"
+              readOnly={isUser}
               value={dayjs(editValues.date_from)}
               disablePast
               onChange={(date) =>
@@ -326,6 +337,7 @@ const TemplatePage = () => {
             <MobileDatePicker
               label="Date to"
               value={dayjs(editValues.date_to)}
+              readOnly={isUser}
               disablePast
               onChange={(date) =>
                 handleChangeValues({
@@ -362,17 +374,41 @@ const TemplatePage = () => {
       )}
 
       {promocodes.map((code, index) => (
-        <TextField
+        <Box
           key={index}
-          value={code}
-          label={`Промокод ${index + 1}`}
-          onChange={(e) => handlePromocodeChange(index, e.target.value)}
-          color="warning"
-          fullWidth
-          sx={{ maxWidth: 700, my: 1 }}
-        />
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            gap: 1,
+            maxWidth: 700,
+            my: 1,
+            width: "100%",
+          }}
+        >
+          <TextField
+            value={code}
+            label={`Промокод ${index + 1}`}
+            onChange={(e) => handlePromocodeChange(index, e.target.value)}
+            color="warning"
+            fullWidth
+          />
+          {promocodes.length > 1 && (
+            <Button
+              variant="outlined"
+              color="error"
+              onClick={() => removePromocodeField(index)}
+              sx={{ minWidth: "auto", padding: "8px" }}
+            >
+              Удалить
+            </Button>
+          )}
+        </Box>
       ))}
-      <Button onClick={addPromocodeField} sx={{ mb: 2 }}>
+      <Button
+        onClick={addPromocodeField}
+        sx={{ mb: 2 }}
+        disabled={promocodes.length >= MAX_PROMOCODES}
+      >
         Добавить ещё промокод
       </Button>
 
