@@ -197,7 +197,7 @@ const checkUserAccess = async (req, res) => {
     }
 
     const result = await pool.query(
-      "SELECT tg_id, name, role FROM users WHERE name = $1 OR tg_id = $2 LIMIT 1",
+      "SELECT id, tg_id, name, role FROM users WHERE name = $1 OR tg_id = $2 LIMIT 1",
       [name, id]
     );
 
