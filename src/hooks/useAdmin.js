@@ -24,7 +24,7 @@ export const useAuth = () => {
         setCurrentUser({
           userId: telegramUserId,
           userName: telegramUserName,
-          role: currentUser.role || "user", 
+          role: currentUser.role || "user",
         })
       );
     }
@@ -49,7 +49,8 @@ export const useAuth = () => {
             ...currentUser,
             adminAccess:
               data.exists && ["admin", "moderator"].includes(data.role),
-            role: data.role || "user", 
+            role: data.role || "user",
+            id: data.id,
           })
         );
       })
@@ -65,28 +66,21 @@ export const useAuth = () => {
       });
   }, [dispatch, currentUser.userName, tgWebAppData?.user?.id]);
 
-  useEffect(() => {
-    const telegramUserId = tgWebAppData?.user?.id;
-    const userName = currentUser.userName;
-
-    if (!userName || !telegramUserId || currentUser.userId === telegramUserId) {
-      return;
-    }
-
+  function addUserId(currentUserId, tgUserId) {
     axios
-      .patch(`${URL_BACK}/updateUser/`, {
-        userName,
-        tg_id: telegramUserId,
+      .patch(`${URL_BACK}/editUser/${currentUserId}`, {
+        tg_id: tgUserId,
       })
       .catch((error) =>
         console.error("Ошибка обновления пользователя:", error)
       );
-  }, [currentUser.userName, currentUser.userId, tgWebAppData?.user?.id]);
+  }
 
   return {
     ...currentUser,
     isAdmin: currentUser.role === "admin",
     isModerator: currentUser.role === "moderator",
     isUser: currentUser.role === "user",
+    addUserId,
   };
 };

@@ -23,6 +23,7 @@ import { useAuth } from "../hooks/useAdmin";
 import dayjs from "dayjs";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import { LocalizationProvider, MobileDatePicker } from "@mui/x-date-pickers";
+import { selectUsers } from "../store/slices/users/usersSlice";
 
 const TemplateListPage = () => {
   const [templatesList, setTemplatesList] = useState([]);
@@ -39,7 +40,14 @@ const TemplateListPage = () => {
   const [openDialog, setOpenDialog] = useState(false);
   const [updateList, setUpdateList] = useState(false);
   const [targetName, setTargetName] = useState("");
-  const { isUser } = useAuth();
+  const { isUser, addUserId } = useAuth();
+  const { currentUser } = useSelector(selectUsers);
+
+  useEffect(() => {
+    if (!currentUser.id || !currentUser.userId) return;
+
+    addUserId(currentUser.id, currentUser.userId);
+  }, [currentUser.id, currentUser.userId]);
 
   const handleChangeFilters = (event) => {
     const { name, value } = event.target;
