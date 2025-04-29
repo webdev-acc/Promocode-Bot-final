@@ -113,28 +113,29 @@ const AdminUsersPage = () => {
     setEditedUser({ userName: "", email: "", role: "" });
   };
 
-  const handleAddNewUser = () => {
+  const handleAddNewUser = async () => {
     if (!newUser.userName || !newUser.email) {
-      return setErrorMessage("Обязательное поле");
+      setErrorMessage("Обязательное поле");
+      return;
     }
 
-    axios
-      .post(`${URL_BACK}/newUser`, {
+    try {
+      await axios.post(`${URL_BACK}/newUser`, {
         userName: newUser.userName,
         email: newUser.email,
         role: newUser.role,
-      })
-      .then(() => {
-        setNewUser({ userName: "", email: "", role: "" });
-        setEditInfo("Пользователь успешно обновлен");
-        setUpdate((prev) => !prev);
-      })
-      .catch((e) => {
-        console.log(e);
-        setEditError("Ошибка при добавлении пользователя");
       });
+      setNewUser({ userName: "", email: "", role: "" });
+      setEditInfo("Пользователь успешно добавлен");
+      setUpdate((prev) => !prev);
+    } catch (e) {
+      console.error(
+        "Ошибка при добавлении пользователя:",
+        e.response?.data || e.message
+      );
+      setEditError("Ошибка при добавлении пользователя");
+    }
   };
-
   const handleOpen = (userName) => {
     setSelectedUser(userName);
     setOpen(true);
