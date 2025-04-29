@@ -202,9 +202,11 @@ const checkUserAccess = async (req, res) => {
     );
 
     if (result.rows.length > 0) {
+      const user = result.rows[0];
       res.json({
         exists: true,
-        role: result.rows[0].role,
+        role: user.role,
+        id: user.id,
       });
     } else {
       res.json({
