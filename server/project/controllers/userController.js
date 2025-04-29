@@ -88,7 +88,7 @@ const updateUser = async (req, res) => {
 const editUser = async (req, res) => {
   try {
     const { id } = req.params;
-    const { userName, email, role } = req.body;
+    const { userName, email, role, tg_id } = req.body;
 
     if (!id) {
       return res.status(400).json({ message: "Не передан id пользователя" });
@@ -123,6 +123,11 @@ const editUser = async (req, res) => {
       }
       fields.push(`role = $${index++}`);
       values.push(role);
+    }
+
+    if (tg_id) {
+      fields.push(`tg_id = $${index++}`);
+      values.push(tg_id);
     }
 
     if (fields.length === 0) {
