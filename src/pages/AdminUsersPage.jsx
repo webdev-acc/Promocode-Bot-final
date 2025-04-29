@@ -124,7 +124,15 @@ const AdminUsersPage = () => {
         email: newUser.email,
         role: newUser.role,
       })
-      .then(() => setUpdate((prev) => !prev));
+      .then(() => {
+        setNewUser({ userName: "", email: "", role: "" });
+        setEditInfo("Пользователь успешно обновлен");
+        setUpdate((prev) => !prev);
+      })
+      .catch((e) => {
+        console.log(e);
+        setEditError("Ошибка при добавлении пользователя");
+      });
   };
 
   const handleOpen = (userName) => {
